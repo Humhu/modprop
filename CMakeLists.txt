@@ -14,6 +14,7 @@ add_definitions( -Wall -std=c++0x )
 
 find_package(catkin REQUIRED 
     COMPONENTS      roscpp
+                    rospy
 )
 
 ## Finding 3rd party packages
@@ -38,6 +39,8 @@ catkin_package(
                     system_lib
                     Eigen3
 )
+
+catkin_python_setup()
 
 include_directories( ${modprop_INCLUDES} ${catkin_INCLUDE_DIRS} include )
 
