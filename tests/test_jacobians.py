@@ -2,13 +2,7 @@ import numpy as np
 import scipy as sp
 from itertools import izip
 
-from context import modprop
-from modprop.core.backprop import *
-from modprop.modules.basic_modules import *
-from modprop.core.modules_core import *
-from modprop.modules.kalman_modules import *
-from modprop.modules.cost_modules import *
-from modprop.modules.reshape_modules import *
+from modprop import *
 from utils import *
 
 if __name__ == '__main__':

@@ -2,20 +2,11 @@ import numpy as np
 import scipy.linalg as spl
 from itertools import izip
 
-from context import modprop
+from modprop import *
 import utils
 import pdb
 
 import matplotlib.pyplot as plt
-
-from modprop.core.construction import ChainConstructor
-from modprop.core.modules_core import iterative_foreprop, iterative_backprop, iterative_invalidate, link_ports
-from modprop.modules.basic_modules import ConstantModule, SinkModule
-from modprop.modules.kalman_modules import PredictModule, UpdateModule
-from modprop.modules.reshape_modules import CholeskyReshapeModule
-from modprop.modules.reduce_modules import MeanModule
-from modprop.modules.cost_modules import LogLikelihoodModule
-from modprop.modules.math_modules import ExponentialModule
 
 class ConstantPSD(object):
     def __init__(self, init_value):
