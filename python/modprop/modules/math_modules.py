@@ -3,6 +3,64 @@
 import numpy as np
 from modprop.core.modules_core import ModuleBase, InputPort, OutputPort
 
+class AdditionModule(ModuleBase):
+    """A module that computes a sum.
+
+    Input Ports
+    -----------
+    left_port  : ND-array left-hand-side term
+    right_port : ND-array right-hand-side term
+
+    Output Ports
+    ------------
+    out_port  : ND-array sum, computed as left + right
+    """
+
+    def __init__(self):
+        ModuleBase.__init__(self)
+        self._left_port = InputPort(self)
+        self._right_port = InputPort(self)
+        self._out_port = OutputPort(self)
+
+        ModuleBase.register_inputs(self, self._left_port)
+        ModuleBase.register_inputs(self, self._right_port)
+        ModuleBase.register_outputs(self, self._out_port)
+
+    def foreprop(self):
+        if not self.foreprop_ready():
+            return []
+
+        out = self._left_port.value + self._right_port.value
+        return self._out_port.foreprop(out)
+
+    def backprop(self):
+        if not self.backprop_ready():
+            return []
+
+        back = []
+
+        dim = len(self._right_port.value.flat)
+        dout_dright = np.identity(dim)
+        do_dright = self._out_port.chain_backprop(dy_dx=dout_dright)
+        back += self._right_port.backprop(do_dright)
+
+        dout_dleft = np.identity(dim)
+        do_dleft = self._out_port.chain_backprop(dy_dx=dout_dleft)
+        back += self._left_port.backprop(do_dleft)
+
+        return back
+
+    @property
+    def left_port(self):
+        return self._left_port
+
+    @property
+    def right_port(self):
+        return self._right_port
+
+    @property
+    def out_port(self):
+        return self._out_port
 
 class DifferenceModule(ModuleBase):
     """A module that computes a difference.
