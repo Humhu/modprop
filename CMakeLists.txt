@@ -32,6 +32,7 @@ set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/"
 
 catkin_package(
     INCLUDE_DIRS    include
+					${EIGEN3_INCLUDE_DIR}
                     
     CATKIN_DEPENDS  roscpp 
                     
