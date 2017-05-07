@@ -6,20 +6,23 @@ import scipy.linalg as spl
 from modprop.core.modules_core import ModuleBase, InputPort, OutputPort, iterative_invalidate
 from modprop.core.backprop import sum_accumulators
 
+
 def transpose_matrix(m, n):
     '''Generate the vectorized transpose matrix for column-major flattening.
     '''
-    d = m*n
+    d = m * n
     inds = np.arange(start=0, stop=d)
     mat_trans = np.reshape(inds, (m, n), 'F').T
     T = np.zeros((d, d))
     T[inds, mat_trans.flatten('F')] = 1
     return T
 
+
 def cho_solve_right(Lfactor, B):
     """Solves a right-inverse system B = XA for X = BA^-1.
     """
     return spl.cho_solve(Lfactor, B.T).T
+
 
 class PredictModule(ModuleBase):
     """Performs a Kalman filter predict step.
@@ -39,6 +42,7 @@ class PredictModule(ModuleBase):
     ----------
     A : Transition matrix
     """
+
     def __init__(self, A):
         ModuleBase.__init__(self)
         self._A = A
@@ -58,7 +62,8 @@ class PredictModule(ModuleBase):
             return []
 
         next_x = np.dot(self._A, self._x_in.value)
-        next_P = np.dot(np.dot(self._A, self._P_in.value), self._A.T) + self._Q_in.value
+        next_P = np.dot(np.dot(self._A, self._P_in.value),
+                        self._A.T) + self._Q_in.value
         ret = self._x_out.foreprop(next_x)
         ret += self._P_out.foreprop(next_P)
 
@@ -123,6 +128,7 @@ class PredictModule(ModuleBase):
     def P_out(self):
         return self._P_out
 
+
 class UpdateModule(ModuleBase):
     """Performs a Kalman filter update step.
 
@@ -164,7 +170,8 @@ class UpdateModule(ModuleBase):
         self._S_out = OutputPort(self)
 
         ModuleBase.register_inputs(self, self._x_in, self._P_in, self._R_in)
-        ModuleBase.register_outputs(self, self._x_out, self._P_out, self._v_out, self._S_out)
+        ModuleBase.register_outputs(
+            self, self._x_out, self._P_out, self._v_out, self._S_out)
 
         # Cached variables
         self._S_chol = None
@@ -202,8 +209,10 @@ class UpdateModule(ModuleBase):
         do_dPin_S, do_dRin_S = self._backprop_S_out()
 
         ret = self._x_in.backprop(sum_accumulators((do_dxin_x, do_dxin_v)))
-        ret += self._P_in.backprop(sum_accumulators((do_dPin_x, do_dPin_P, do_dPin_S)))
-        ret += self._R_in.backprop(sum_accumulators((do_dR_x, do_dRin_P, do_dRin_S)))
+        ret += self._P_in.backprop(sum_accumulators((do_dPin_x,
+                                                     do_dPin_P, do_dPin_S)))
+        ret += self._R_in.backprop(sum_accumulators((do_dR_x,
+                                                     do_dRin_P, do_dRin_S)))
         return ret
 
     def _backprop_x_out(self):
@@ -228,7 +237,7 @@ class UpdateModule(ModuleBase):
         KC = np.dot(self._K, self._C)
 
         I = np.identity(N)
-        II = np.identity(N*N)
+        II = np.identity(N * N)
         T = transpose_matrix(N, N)
         dPout_dPin = II - np.dot(II + T, np.kron(I, KC)) + np.kron(KC, KC)
 

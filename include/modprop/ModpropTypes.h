@@ -2,7 +2,7 @@
 
 #include <Eigen/Dense>
 
-namespace percepto 
+namespace argus 
 {
 
 typedef double ScalarType;

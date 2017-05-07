@@ -33,7 +33,9 @@ set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/"
 catkin_package(
     INCLUDE_DIRS    include
 					${EIGEN3_INCLUDE_DIR}
-                    
+    
+	LIBRARIES       modprop
+
     CATKIN_DEPENDS  roscpp 
                     
     DEPENDS         Boost 
@@ -45,19 +47,33 @@ catkin_python_setup()
 
 include_directories( ${modprop_INCLUDES} ${catkin_INCLUDE_DIRS} include )
 
-# Test binaries
-add_executable( test_regression tests/RegressionTest.cpp )
-target_link_libraries( test_regression 
-                       ${modprop_LIBRARIES} 
-                       ${catkin_LIBRARIES} )
+add_library( modprop 
+	src/BasicModules.cpp
+	src/GaussianLogLikelihood.cpp
+	src/ModulesCore.cpp
+	src/PredictModule.cpp
+	src/UpdateModule.cpp )
 
-add_executable( test_derivative tests/DerivativeTest.cpp )
-target_link_libraries( test_derivative 
+# Test binaries
+# add_executable( test_regression tests/RegressionTest.cpp )
+# target_link_libraries( test_regression 
+#                        modprop
+#                        ${modprop_LIBRARIES} 
+#                        ${catkin_LIBRARIES} )
+
+# add_executable( test_derivative tests/DerivativeTest.cpp )
+# target_link_libraries( test_derivative
+#                        modprop
+#                        ${modprop_LIBRARIES}
+#                        ${catkin_LIBRARIES}  )
+
+add_executable( test_kalman tests/KalmanTest.cpp )
+target_link_libraries( test_kalman
+                       modprop
                        ${modprop_LIBRARIES}
                        ${catkin_LIBRARIES}  )
 
-install( TARGETS test_regression 
-                 test_derivative 
+install( TARGETS test_kalman
     ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
