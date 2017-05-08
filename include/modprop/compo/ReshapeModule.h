@@ -6,6 +6,7 @@ namespace argus
 {
 // Functions to generate single column-major indices
 std::vector<unsigned int> gen_diag_inds( unsigned int N );
+// TODO Allow for above-diagonal d?
 std::vector<unsigned int> gen_trilc_inds( unsigned int N, unsigned int d );
 
 class ReshapeModule
@@ -15,7 +16,7 @@ public:
 
 	ReshapeModule();
 
-	void SetShapeParams( unsigned int outputRows, unsigned int outputCols,
+	void SetShapeParams( const MatrixType& baseOut,
 	                     const std::vector<unsigned int>& inds );
 
 	void Foreprop();
@@ -29,8 +30,7 @@ private:
 	InputPort _input;
 	OutputPort _output;
 
-	unsigned int _outRows;
-	unsigned int _outCols;
+	MatrixType _baseOut;
 	std::vector<unsigned int> _inds;
 };
 }

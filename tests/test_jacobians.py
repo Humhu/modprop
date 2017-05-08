@@ -381,13 +381,13 @@ if __name__ == '__main__':
     # print 'Testing predict module...'
     # test_derivs(pred_func, dpred, pred_init, pred_deltas)
 
-    print 'Testing update module...'
-    test_derivs(up_func, dup, up_init, up_deltas, mode='relative', tol=1E-3)
+    # print 'Testing update module...'
+    # test_derivs(up_func, dup, up_init, up_deltas, mode='relative', tol=1E-3)
 
     # test_derivs(co_func, dco, co_init, co_deltas)
 
-    # print 'Testing log-likelihood module...'
-    # test_derivs(ll_func, dll, ll_init, ll_deltas)
+    print 'Testing log-likelihood module...'
+    test_derivs(ll_func, dll, ll_init, ll_deltas)
 
     # print 'Testing cholesky module...'
     # test_derivs(chol_func, cll, chol_init, chol_deltas)

@@ -13,12 +13,12 @@ MatrixType llt_solve_right( const Eigen::LLT<MatrixType>& llt,
                             const MatrixType& b );
 
 /*! \brief Adds two sources together. */
-class KalmanUpdateModule
+class UpdateModule
 	: public KalmanIn, public KalmanOut
 {
 public:
 
-	KalmanUpdateModule();
+	UpdateModule();
 
 	// Linear mode
 	void SetLinearParams( const MatrixType& C, const VectorType& y );

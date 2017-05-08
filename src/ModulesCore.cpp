@@ -1,5 +1,6 @@
 #include "modprop/compo/ModulesCore.h"
 #include <iostream>
+#include <algorithm>
 
 namespace argus
 {
@@ -15,6 +16,28 @@ void ModuleBase::RegisterInput( InputPort* in )
 void ModuleBase::RegisterOutput( OutputPort* out )
 {
 	_outputs.push_back( out );
+}
+
+void ModuleBase::UnregisterInput( InputPort* in )
+{
+	std::vector<InputPort*>::iterator iter;
+	iter = std::find( _inputs.begin(), _inputs.end(), in );
+	if( iter == _inputs.end() )
+	{
+		throw std::runtime_error("Cannot unregister non-registered input port");
+	}
+	_inputs.erase( iter );
+}
+
+void ModuleBase::UnregisterOutput( OutputPort* out )
+{
+	std::vector<OutputPort*>::iterator iter;
+	iter = std::find( _outputs.begin(), _outputs.end(), out );
+	if( iter == _outputs.end() )
+	{
+		throw std::runtime_error("Cannot unregister non-registered output port");
+	}
+	_outputs.erase( iter );
 }
 
 bool ModuleBase::FullyValid() const
@@ -146,6 +169,17 @@ void OutputPort::RegisterConsumer( InputPort* in )
 	_consumers.push_back( in );
 }
 
+void OutputPort::UnregisterConsumer( InputPort* in )
+{
+	std::vector<InputPort*>::iterator iter;
+	iter = std::find( _consumers.begin(), _consumers.end(), in );
+	if( iter == _consumers.end() )
+	{
+		throw std::invalid_argument( "Cannot unregister non-registered consumer" );
+	}
+	_consumers.erase( iter );
+}
+
 void OutputPort::Invalidate()
 {
 	if( !Valid() ) { return; }
@@ -257,10 +291,16 @@ const MatrixType& OutputPort::GetValue() const
 	return _value;
 }
 
-void link_ports( InputPort& in, OutputPort& out )
+void link_ports( OutputPort& out, InputPort& in )
 {
 	in.RegisterSource( &out );
 	out.RegisterConsumer( &in );
+}
+
+void unlink_ports( OutputPort& out, InputPort& in )
+{
+	in.RegisterSource( nullptr );
+	out.UnregisterConsumer( &in );
 }
 
 MatrixType sum_matrices( const std::vector<MatrixType>& mats )

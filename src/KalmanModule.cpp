@@ -40,14 +40,14 @@ const MatrixType& KalmanOut::GetP() const
 
 void link_kalman_ports( KalmanOut& pre, KalmanIn& post )
 {
-	link_ports( post.GetXIn(), pre.GetXOut() );
-	link_ports( post.GetPIn(), pre.GetPOut() );
+	link_ports( pre.GetXOut(), post.GetXIn() );
+	link_ports( pre.GetPOut(), post.GetPIn() );
 }
 
 void unlink_kalman_ports( KalmanOut& pre, KalmanIn& post )
 {
-	link_ports( post.GetXIn(), pre.GetXOut() );
-	link_ports( post.GetPIn(), pre.GetPOut() );
+	link_ports( pre.GetXOut(), post.GetXIn() );
+	link_ports( pre.GetPOut(), post.GetPIn() );
 }
 
 KalmanPrior::KalmanPrior() {}

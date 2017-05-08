@@ -28,7 +28,7 @@ MatrixType llt_solve_right( const Eigen::LLT<MatrixType>& llt,
 	return llt.solve( b.transpose() ).transpose();
 }
 
-KalmanUpdateModule::KalmanUpdateModule()
+UpdateModule::UpdateModule()
 	: _RIn( *this ), _vOut( *this ), _SOut( *this )
 {
 	RegisterInput( &_RIn );
@@ -36,7 +36,7 @@ KalmanUpdateModule::KalmanUpdateModule()
 	RegisterOutput( &_SOut );
 }
 
-void KalmanUpdateModule::SetLinearParams( const MatrixType& C,
+void UpdateModule::SetLinearParams( const MatrixType& C,
                                           const VectorType& y )
 {
 	_C = C;
@@ -46,7 +46,7 @@ void KalmanUpdateModule::SetLinearParams( const MatrixType& C,
 	Invalidate();
 }
 
-void KalmanUpdateModule::SetNonlinearParams( const MatrixType& G,
+void UpdateModule::SetNonlinearParams( const MatrixType& G,
                                              const VectorType& y,
 											 const VectorType& x0,
 											 const VectorType& y0 )
@@ -58,7 +58,7 @@ void KalmanUpdateModule::SetNonlinearParams( const MatrixType& G,
 	Invalidate();
 }
 
-VectorType KalmanUpdateModule::LinpointDelta() const
+VectorType UpdateModule::LinpointDelta() const
 {
 	const MatrixType& xIn = _xIn.GetValue();
 	Eigen::Map<const VectorType> xVec( xIn.data(), xIn.size(), 1 );
@@ -66,7 +66,7 @@ VectorType KalmanUpdateModule::LinpointDelta() const
 	return xVec - _x0;
 }
 
-void KalmanUpdateModule::Foreprop()
+void UpdateModule::Foreprop()
 {
 	CheckParams();
 
@@ -90,7 +90,7 @@ void KalmanUpdateModule::Foreprop()
 	_SOut.Foreprop( S );
 }
 
-void KalmanUpdateModule::Backprop()
+void UpdateModule::Backprop()
 {
 	MatrixType do_dxin_x, do_dPin_x, do_dR_x;
 	MatrixType do_dPin_P, do_dRin_P;
@@ -107,11 +107,11 @@ void KalmanUpdateModule::Backprop()
 	_RIn.Backprop( sum_matrices( {do_dR_x, do_dRin_P, do_dRin_S} ) );
 }
 
-InputPort& KalmanUpdateModule::GetRIn() { return _RIn; }
-OutputPort& KalmanUpdateModule::GetVOut() { return _vOut; }
-OutputPort& KalmanUpdateModule::GetSOut() { return _SOut; }
+InputPort& UpdateModule::GetRIn() { return _RIn; }
+OutputPort& UpdateModule::GetVOut() { return _vOut; }
+OutputPort& UpdateModule::GetSOut() { return _SOut; }
 
-void KalmanUpdateModule::CheckParams()
+void UpdateModule::CheckParams()
 {
 	if( _C.size() == 0 || _y.size() == 0 )
 	{
@@ -119,9 +119,9 @@ void KalmanUpdateModule::CheckParams()
 	}
 }
 
-void KalmanUpdateModule::BackpropXOut( MatrixType& do_dxin,
-                                       MatrixType& do_dPin,
-                                       MatrixType& do_dR )
+void UpdateModule::BackpropXOut( MatrixType& do_dxin,
+                                 MatrixType& do_dPin,
+                                 MatrixType& do_dR )
 {
 	const MatrixType& xIn = _xIn.GetValue();
 	const MatrixType& vOut = _vOut.GetValue();
@@ -142,7 +142,7 @@ void KalmanUpdateModule::BackpropXOut( MatrixType& do_dxin,
 	do_dR = _xOut.ChainBackprop( dxout_dR );
 }
 
-void KalmanUpdateModule::BackpropPOut( MatrixType& do_dPin,
+void UpdateModule::BackpropPOut( MatrixType& do_dPin,
                                        MatrixType& do_dRin )
 {
 	size_t N = _xIn.GetValue().size();
@@ -161,12 +161,12 @@ void KalmanUpdateModule::BackpropPOut( MatrixType& do_dPin,
 	do_dRin = _POut.ChainBackprop( dPout_dRin );
 }
 
-void KalmanUpdateModule::BackpropVOut( MatrixType& do_dxin )
+void UpdateModule::BackpropVOut( MatrixType& do_dxin )
 {
 	do_dxin = _vOut.ChainBackprop( -_C );
 }
 
-void KalmanUpdateModule::BackpropSOut( MatrixType& do_dPin,
+void UpdateModule::BackpropSOut( MatrixType& do_dPin,
                                        MatrixType& do_dRin )
 {
 	MatrixType dSout_dPin = Eigen::kroneckerProduct( _C, _C );

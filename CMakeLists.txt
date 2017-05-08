@@ -51,8 +51,9 @@ add_library( modprop
 	src/BasicModules.cpp
 	src/DerivativeTester.cpp
 	src/ExponentialModule.cpp
-	src/GaussianLogLikelihood.cpp
+	src/GaussianLikelihoodModule.cpp
 	src/KalmanModule.cpp
+	src/MeanModule.cpp
 	src/ModulesCore.cpp
 	src/PredictModule.cpp
 	src/ReshapeModule.cpp

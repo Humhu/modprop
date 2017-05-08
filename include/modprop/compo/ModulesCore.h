@@ -17,6 +17,8 @@ public:
 
 	void RegisterInput( InputPort* in );
 	void RegisterOutput( OutputPort* out );
+	void UnregisterInput( InputPort* in );
+	void UnregisterOutput( OutputPort* out );
 
 	virtual void Foreprop() = 0;
 	virtual void Backprop() = 0;
@@ -28,6 +30,10 @@ public:
 	void Invalidate();
 
 private:
+
+	// Moving would invalidate all port pointers, so we make it illegal
+	ModuleBase( const ModuleBase& other );
+	ModuleBase& operator=( const ModuleBase& other );
 
 	std::vector<InputPort*> _inputs;
 	std::vector<OutputPort*> _outputs;
@@ -51,6 +57,9 @@ public:
 	const MatrixType& GetValue() const;
 
 private:
+
+	InputPort( const InputPort& other );
+	InputPort& operator=( const InputPort& other );
 
 	ModuleBase& _module;
 	bool _valid;
@@ -80,6 +89,9 @@ public:
 
 private:
 
+	OutputPort( const OutputPort& other );
+	OutputPort& operator=( const OutputPort& other );
+
 	ModuleBase& _module;
 	std::vector<InputPort*> _consumers;
 
@@ -89,8 +101,8 @@ private:
 	size_t _numBacks;
 };
 
-void link_ports( InputPort& in, OutputPort& out );
-void unlink_ports( InputPort& in, OutputPort& out );
+void link_ports( OutputPort& out, InputPort& in );
+void unlink_ports( OutputPort& out, InputPort& in );
 
 MatrixType sum_matrices( const std::vector<MatrixType>& mats );
 }

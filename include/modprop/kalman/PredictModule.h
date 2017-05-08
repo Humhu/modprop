@@ -4,12 +4,12 @@
 
 namespace argus
 {
-class KalmanPredictModule
+class PredictModule
 	: public KalmanIn, public KalmanOut
 {
 public:
 
-	KalmanPredictModule();
+	PredictModule();
 
 	// Linear mode
 	void SetLinearParams( const MatrixType& A );

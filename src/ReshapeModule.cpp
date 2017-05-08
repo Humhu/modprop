@@ -41,12 +41,10 @@ ReshapeModule::ReshapeModule()
 	RegisterOutput( &_output );
 }
 
-void ReshapeModule::SetShapeParams( unsigned int outputRows,
-                                    unsigned int outputCols,
+void ReshapeModule::SetShapeParams( const MatrixType& baseOut,
                                     const std::vector<unsigned int>& inds )
 {
-	_outRows = outputRows;
-	_outCols = outputCols;
+	_baseOut = baseOut;
 	_inds = inds;
 }
 
@@ -58,7 +56,7 @@ void ReshapeModule::Foreprop()
 		throw std::runtime_error( "Incorrect reshape input size" );
 	}
 
-	MatrixType L = MatrixType::Zero( _outRows, _outCols );
+	MatrixType L = _baseOut;
 	for( unsigned int i = 0; i < _inds.size(); ++i )
 	{
 		L( _inds[i] ) = l( i );
@@ -69,8 +67,7 @@ void ReshapeModule::Foreprop()
 
 void ReshapeModule::Backprop()
 {
-	MatrixType dL_dl = MatrixType::Zero( _outRows * _outCols,
-	                                     _inds.size() );
+	MatrixType dL_dl = MatrixType::Zero( _baseOut.size(), _inds.size() );
 	for( unsigned int i = 0; i < _inds.size(); ++i )
 	{
 		dL_dl( _inds[i], i ) = 1;

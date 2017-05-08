@@ -110,14 +110,14 @@ unsigned int Pipeline::ParamDim() const
 void Pipeline::RegisterInput( InputPort& in, const MatrixType& init )
 {
 	_params.emplace_back();
-	link_ports( in, _params.back().GetOutput() );
+	link_ports( _params.back().GetOutput(), in );
 	_params.back().SetValue( init );
 }
 
 void Pipeline::RegisterOutput( OutputPort& out )
 {
 	_outputs.emplace_back();
-	link_ports( _outputs.back().GetInput(), out );
+	link_ports( out, _outputs.back().GetInput() );
 }
 
 void test_derivatives( Pipeline& pipe, double stepSize, double eps )

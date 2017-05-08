@@ -3,13 +3,13 @@
 #include <iostream>
 namespace argus
 {
-KalmanPredictModule::KalmanPredictModule()
+PredictModule::PredictModule()
 	: _QIn( *this )
 {
 	RegisterInput( &_QIn );
 }
 
-void KalmanPredictModule::SetLinearParams( const MatrixType& A )
+void PredictModule::SetLinearParams( const MatrixType& A )
 {
 	_A = A;
 	_x0 = VectorType::Zero( _A.rows() );
@@ -17,7 +17,7 @@ void KalmanPredictModule::SetLinearParams( const MatrixType& A )
 	Invalidate();
 }
 
-void KalmanPredictModule::SetNonlinearParams( const MatrixType& F,
+void PredictModule::SetNonlinearParams( const MatrixType& F,
                                               const VectorType& x0,
                                               const VectorType& y0 )
 {
@@ -27,7 +27,7 @@ void KalmanPredictModule::SetNonlinearParams( const MatrixType& F,
 	Invalidate();
 }
 
-VectorType KalmanPredictModule::LinpointDelta() const
+VectorType PredictModule::LinpointDelta() const
 {
 	const MatrixType& xIn = _xIn.GetValue();
 	Eigen::Map<const VectorType> xVec( xIn.data(), xIn.size(), 1 );
@@ -35,7 +35,7 @@ VectorType KalmanPredictModule::LinpointDelta() const
 	return xVec - _x0;
 }
 
-void KalmanPredictModule::Foreprop()
+void PredictModule::Foreprop()
 {
 	CheckParams();
 
@@ -51,7 +51,7 @@ void KalmanPredictModule::Foreprop()
 	_POut.Foreprop( nextP );
 }
 
-void KalmanPredictModule::Backprop()
+void PredictModule::Backprop()
 {
 	MatrixType do_dxin, do_dPin, do_dQ;
 	BackpropXOut( do_dxin );
@@ -62,9 +62,9 @@ void KalmanPredictModule::Backprop()
 	_QIn.Backprop( do_dQ );
 }
 
-InputPort& KalmanPredictModule::GetQIn() { return _QIn; }
+InputPort& PredictModule::GetQIn() { return _QIn; }
 
-void KalmanPredictModule::CheckParams()
+void PredictModule::CheckParams()
 {
 	if( _A.size() == 0 )
 	{
@@ -72,13 +72,13 @@ void KalmanPredictModule::CheckParams()
 	}
 }
 
-void KalmanPredictModule::BackpropXOut( MatrixType& do_dxin )
+void PredictModule::BackpropXOut( MatrixType& do_dxin )
 {
 	MatrixType dxout_dxin = _A;
 	do_dxin = _xOut.ChainBackprop( dxout_dxin );
 }
 
-void KalmanPredictModule::BackpropPOut( MatrixType& do_dPin,
+void PredictModule::BackpropPOut( MatrixType& do_dPin,
                                         MatrixType& do_dQ )
 {
 	MatrixType dPout_dPin = Eigen::kroneckerProduct( _A, _A );

@@ -1,7 +1,7 @@
 #include "modprop/compo/core.hpp"
 #include "modprop/kalman/kalman.hpp"
 
-#include "modprop/optim/GaussianLogLikelihood.h"
+#include "modprop/optim/GaussianLikelihoodModule.h"
 
 #include "modprop/utils/DerivativeTester.h"
 #include "modprop/utils/MatrixUtils.hpp"
@@ -33,7 +33,7 @@ struct PredictPipeline
 		RegisterOutput( predMod.GetPOut() );
 	}
 
-	KalmanPredictModule predMod;
+	PredictModule predMod;
 };
 
 struct UpdatePipeline
@@ -49,16 +49,68 @@ struct UpdatePipeline
 
 		upMod.SetLinearParams( C, y );
 
+		// Initialize R
+		Eigen::LDLT<MatrixType> ldlt( R );
+		std::vector<unsigned int> trilInds = gen_trilc_inds( obs_dim, 1 );
+		VectorType lInit( trilInds.size() );
+		MatrixType matL = ldlt.matrixL();
+		for( unsigned int i = 0; i < trilInds.size(); ++i )
+		{
+			lInit( i ) = matL( trilInds[i] );
+		}
+		_RlReshape.SetShapeParams( MatrixType::Identity( obs_dim, obs_dim ), trilInds );
+
+		std::vector<unsigned int> diagInds = gen_diag_inds( obs_dim );
+		VectorType dInit = ldlt.vectorD().array().log().matrix();
+		_RdReshape.SetShapeParams( MatrixType::Zero( obs_dim, obs_dim ), diagInds );
+
+		link_ports( _RexpD.GetOutput(), _RdReshape.GetInput() );
+		link_ports( _RdReshape.GetOutput(), _Rldlt.GetCIn() );
+		link_ports( _RlReshape.GetOutput(), _Rldlt.GetXIn() );
+		link_ports( _Rldlt.GetSOut(), upMod.GetRIn() );
+		RegisterInput( _RexpD.GetInput(), dInit );
+		RegisterInput( _RlReshape.GetInput(), lInit );
+
+		// Initialize Pin
+		ldlt.compute( P0 );
+		trilInds = gen_trilc_inds( obs_dim, 1 );
+		lInit = VectorType( trilInds.size() );
+		matL = ldlt.matrixL();
+		for( unsigned int i = 0; i < trilInds.size(); ++i )
+		{
+			lInit( i ) = matL( trilInds[i] );
+		}
+		_PlReshape.SetShapeParams( MatrixType::Identity( state_dim, state_dim ), trilInds );
+
+		diagInds = gen_diag_inds( state_dim );
+		dInit = ldlt.vectorD().array().log().matrix();
+		_PdReshape.SetShapeParams( MatrixType::Zero( state_dim, state_dim ), diagInds );
+
+		link_ports( _PexpD.GetOutput(), _PdReshape.GetInput() );
+		link_ports( _PdReshape.GetOutput(), _Pldlt.GetCIn() );
+		link_ports( _PlReshape.GetOutput(), _Pldlt.GetXIn() );
+		link_ports( _Pldlt.GetSOut(), upMod.GetPIn() );
+		RegisterInput( _PexpD.GetInput(), dInit );
+		RegisterInput( _PlReshape.GetInput(), lInit );
+
 		RegisterInput( upMod.GetXIn(), x0 );
-		RegisterInput( upMod.GetPIn(), P0 );
-		RegisterInput( upMod.GetRIn(), R );
 		RegisterOutput( upMod.GetXOut() );
 		RegisterOutput( upMod.GetPOut() );
 		RegisterOutput( upMod.GetVOut() );
 		RegisterOutput( upMod.GetSOut() );
 	}
 
-	KalmanUpdateModule upMod;
+	ExponentialModule _RexpD;
+	ReshapeModule _RlReshape;
+	ReshapeModule _RdReshape;
+	XTCXModule _Rldlt;
+
+	ExponentialModule _PexpD;
+	ReshapeModule _PlReshape;
+	ReshapeModule _PdReshape;
+	XTCXModule _Pldlt;
+
+	UpdateModule upMod;
 };
 
 struct LikelihoodPipeline
@@ -69,12 +121,37 @@ struct LikelihoodPipeline
 		VectorType sample = VectorType::Random( dim );
 		MatrixType cov = random_PD( dim );
 
+		Eigen::LDLT<MatrixType> ldlt( cov );
+		std::vector<unsigned int> trilInds = gen_trilc_inds( dim, 1 );
+		VectorType lInit( trilInds.size() );
+		MatrixType matL = ldlt.matrixL();
+		for( unsigned int i = 0; i < trilInds.size(); ++i )
+		{
+			lInit( i ) = matL( trilInds[i] );
+		}
+		_lReshape.SetShapeParams( MatrixType::Identity( dim, dim ), trilInds );
+
+		std::vector<unsigned int> diagInds = gen_diag_inds( dim );
+		VectorType dInit = ldlt.vectorD().array().log().matrix();
+		_dReshape.SetShapeParams( MatrixType::Zero( dim, dim ), diagInds );
+
+		link_ports( _expD.GetOutput(), _dReshape.GetInput() );
+		link_ports( _dReshape.GetOutput(), _ldlt.GetCIn() );
+		link_ports( _lReshape.GetOutput(), _ldlt.GetXIn() );
+		link_ports( _ldlt.GetSOut(), gll.GetSIn() );
+
+		RegisterInput( _expD.GetInput(), dInit );
+		RegisterInput( _lReshape.GetInput(), lInit );
 		RegisterInput( gll.GetXIn(), sample );
-		RegisterInput( gll.GetSIn(), cov );
 		RegisterOutput( gll.GetLLOut() );
 	}
 
-	GaussianLogLikelihood gll;
+	ExponentialModule _expD;
+	ReshapeModule _lReshape;
+	ReshapeModule _dReshape;
+	XTCXModule _ldlt;
+
+	GaussianLikelihoodModule gll;
 };
 
 struct ReshapePipeline
@@ -83,7 +160,7 @@ struct ReshapePipeline
 	ReshapePipeline( unsigned int dim, unsigned int d )
 	{
 		std::vector<unsigned int> inds = gen_trilc_inds( dim, d );
-		lt.SetShapeParams( dim, dim, inds );
+		lt.SetShapeParams( MatrixType::Identity( dim, dim ), inds );
 		VectorType l = VectorType::Random( inds.size() );
 		RegisterInput( lt.GetInput(), l );
 		RegisterOutput( lt.GetOutput() );

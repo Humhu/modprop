@@ -83,9 +83,12 @@ class LogLikelihoodModule(ModuleBase):
         # do_dx = np.dot(do_dll, dll_dx)
         do_dxin = self._ll_out.chain_backprop(dy_dx=dll_dxin)
 
-        dll_dSin = -0.5 * self._S_inv.flatten('F') + 0.5 * np.kron(self._x_inv, self._x_inv)
-        dll_dSin = np.atleast_2d(dll_dSin)
-        # do_dS = np.dot(do_dll, dll_dS)
+        xxT = np.outer(self._x_in.value, self._x_in.value)
+        Sinvvec = np.atleast_2d(self._S_inv.flatten('F'))
+        xxTvec = np.atleast_2d(xxT.flatten('F'))
+
+        dll_dSin = -0.5 * Sinvvec + \
+             0.5 * np.dot(xxTvec, np.kron(self._S_inv.T, self._S_inv))
         do_dSin = self._ll_out.chain_backprop(dy_dx=dll_dSin)
 
 

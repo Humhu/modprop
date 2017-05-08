@@ -13,14 +13,14 @@ namespace argus
  * set of samples drawn from a zero mean Gaussian with the inverse covariance
  * specified per sample by a MatrixBase. Returns negative log-likelihood since
  * it is supposed to be a cost. */
-class GaussianLogLikelihood
+class GaussianLikelihoodModule
 	: public ModuleBase
 {
 public:
 
 	/*! \brief Create a cost representing the log likelihood under the matrix
 	 * outputted by the regressor. */
-	GaussianLogLikelihood();
+	GaussianLikelihoodModule();
 
 	/*! \brief Computes the log-likelihood of the input sample using the
 	 * covariance generated from the input features. */
