@@ -5,6 +5,8 @@ namespace argus
 {
 ModuleBase::ModuleBase() {}
 
+ModuleBase::~ModuleBase() {}
+
 void ModuleBase::RegisterInput( InputPort* in )
 {
 	_inputs.push_back( in );
@@ -94,6 +96,11 @@ void InputPort::Invalidate()
 
 void InputPort::Foreprop( const MatrixType& val )
 {
+	if( _valid )
+	{
+		throw std::runtime_error( "Already valid input received foreprop" );
+	}
+
 	_valid = true;
 	_value = val;
 
@@ -180,6 +187,8 @@ void OutputPort::Backprop( const MatrixType& dodx )
 
 	if( dodx.cols() != _value.size() )
 	{
+		std::cout << "dodx: " << dodx << std::endl;
+		std::cout << "value: " << _value << std::endl;
 		throw std::runtime_error( "Output backprop dimension mismatch" );
 	}
 

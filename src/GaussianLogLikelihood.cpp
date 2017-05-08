@@ -37,12 +37,12 @@ void GaussianLogLikelihood::Foreprop()
 
 void GaussianLogLikelihood::Backprop()
 {
-	MatrixType do_dxin = _llOut.ChainBackprop( -_xInv );
+	MatrixType do_dxin = _llOut.ChainBackprop( -_xInv.transpose() );
 
 	Eigen::Map<VectorType> SinvFlat( _SInv.data(), _SInv.size(), 1 );
 	MatrixType dll_dSin = -0.5 * SinvFlat +
 							0.5 * Eigen::kroneckerProduct( _xInv, _xInv );
-	MatrixType do_dSin = _llOut.ChainBackprop( dll_dSin );
+	MatrixType do_dSin = _llOut.ChainBackprop( dll_dSin.transpose() );
 
 	_xIn.Backprop( do_dxin );
 	_SIn.Backprop( do_dSin );

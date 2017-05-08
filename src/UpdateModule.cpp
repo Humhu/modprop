@@ -29,15 +29,9 @@ MatrixType llt_solve_right( const Eigen::LLT<MatrixType>& llt,
 }
 
 KalmanUpdateModule::KalmanUpdateModule()
-	: _xIn( *this ), _PIn( *this ), _RIn( *this ),
-	_xOut( *this ), _POut( *this ), _vOut( *this ),
-	_SOut( *this )
+	: _RIn( *this ), _vOut( *this ), _SOut( *this )
 {
-	RegisterInput( &_xIn );
-	RegisterInput( &_PIn );
 	RegisterInput( &_RIn );
-	RegisterOutput( &_xOut );
-	RegisterOutput( &_POut );
 	RegisterOutput( &_vOut );
 	RegisterOutput( &_SOut );
 }
@@ -108,20 +102,12 @@ void KalmanUpdateModule::Backprop()
 	BackpropVOut( do_dxin_v );
 	BackpropSOut( do_dPin_S, do_dRin_S );
 
-	std::cout << "dodPinx: " << do_dPin_x << std::endl;
-	std::cout << "dodPinP: " << do_dPin_P << std::endl;
-	std::cout << "dodPinS: " << do_dPin_S << std::endl;
-
 	_xIn.Backprop( sum_matrices( {do_dxin_x, do_dxin_v} ) );
 	_PIn.Backprop( sum_matrices( {do_dPin_x, do_dPin_P, do_dPin_S} ) );
 	_RIn.Backprop( sum_matrices( {do_dR_x, do_dRin_P, do_dRin_S} ) );
 }
 
-InputPort& KalmanUpdateModule::GetXIn() { return _xIn; }
-InputPort& KalmanUpdateModule::GetPIn() { return _PIn; }
 InputPort& KalmanUpdateModule::GetRIn() { return _RIn; }
-OutputPort& KalmanUpdateModule::GetXOut() { return _xOut; }
-OutputPort& KalmanUpdateModule::GetPOut() { return _POut; }
 OutputPort& KalmanUpdateModule::GetVOut() { return _vOut; }
 OutputPort& KalmanUpdateModule::GetSOut() { return _SOut; }
 

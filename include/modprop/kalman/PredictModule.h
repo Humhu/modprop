@@ -1,11 +1,11 @@
 #pragma once
 
-#include "modprop/compo/ModulesCore.h"
+#include "modprop/kalman/KalmanModule.h"
 
 namespace argus
 {
 class KalmanPredictModule
-	: public ModuleBase
+	: public KalmanIn, public KalmanOut
 {
 public:
 
@@ -24,11 +24,7 @@ public:
 	void Foreprop();
 	void Backprop();
 
-	InputPort& GetXIn();
-	InputPort& GetPIn();
 	InputPort& GetQIn();
-	OutputPort& GetXOut();
-	OutputPort& GetPOut();
 
 private:
 
@@ -36,12 +32,7 @@ private:
 	VectorType _x0;
 	VectorType _y0;
 
-	InputPort _xIn;
-	InputPort _PIn;
 	InputPort _QIn;
-
-	OutputPort _xOut;
-	OutputPort _POut;
 
 	void CheckParams();
 	void BackpropXOut( MatrixType& do_dxin );

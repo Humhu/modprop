@@ -10,10 +10,14 @@ class ConstantModule
 public:
 
 	ConstantModule( const MatrixType& val = MatrixType() );
+	
 	void Foreprop();
-
 	void Backprop();
+	
 	OutputPort& GetOutput();
+	
+	void SetValue( const MatrixType& val );
+	const MatrixType& GetValue() const;
 	const MatrixType& GetBackpropValue() const;
 
 private:

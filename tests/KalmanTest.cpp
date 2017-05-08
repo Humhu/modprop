@@ -1,108 +1,149 @@
-#include "modprop/kalman/PredictModule.h"
-#include "modprop/kalman/UpdateModule.h"
-#include "modprop/compo/BasicModules.h"
+#include "modprop/compo/core.hpp"
+#include "modprop/kalman/kalman.hpp"
+
 #include "modprop/optim/GaussianLogLikelihood.h"
+
+#include "modprop/utils/DerivativeTester.h"
+#include "modprop/utils/MatrixUtils.hpp"
 
 using namespace argus;
 
-void TestPredict()
+MatrixType random_PD( unsigned int n )
 {
-	unsigned int state_dim = 3;
+	MatrixType A = MatrixType::Random( n, n );
+	return A * A.transpose();
+}
 
-	ConstantModule xInit( VectorType::Zero( state_dim ) );
-	ConstantModule PInit( MatrixType::Identity( state_dim, state_dim ) );
-	ConstantModule QInit( MatrixType::Identity( state_dim, state_dim ) );
+struct PredictPipeline
+	: public Pipeline
+{
+	PredictPipeline( unsigned int state_dim )
+	{
+		MatrixType x0 = VectorType::Random( state_dim );
+		MatrixType P0 = random_PD( state_dim );
+		MatrixType Q = random_PD( state_dim );
+		MatrixType A = MatrixType::Random( state_dim, state_dim );
 
-	SinkModule xOut, POut;
+		predMod.SetLinearParams( A );
+
+		RegisterInput( predMod.GetXIn(), x0 );
+		RegisterInput( predMod.GetPIn(), P0 );
+		RegisterInput( predMod.GetQIn(), Q );
+		RegisterOutput( predMod.GetXOut() );
+		RegisterOutput( predMod.GetPOut() );
+	}
 
 	KalmanPredictModule predMod;
-	predMod.SetLinearParams( MatrixType::Identity( state_dim, state_dim ) );
-	link_ports( predMod.GetXIn(), xInit.GetOutput() );
-	link_ports( predMod.GetPIn(), PInit.GetOutput() );
-	link_ports( predMod.GetQIn(), QInit.GetOutput() );
-	link_ports( xOut.GetInput(), predMod.GetXOut() );
-	link_ports( POut.GetInput(), predMod.GetPOut() );
+};
 
-	xInit.Foreprop();
-	PInit.Foreprop();
-	QInit.Foreprop();
-
-	std::cout << "pred xout: " << xOut.GetValue() << std::endl;
-	std::cout << "pred Pout: " << POut.GetValue() << std::endl;
-
-	xOut.Backprop( MatrixType::Ones( 1, state_dim ) );
-	POut.Backprop( MatrixType::Ones( 1, state_dim * state_dim ) );
-
-	std::cout << "xinit backprop: " << xInit.GetBackpropValue() << std::endl;
-	std::cout << "Pinit backprop: " << PInit.GetBackpropValue() << std::endl;
-	std::cout << "Qinit backprop: " << QInit.GetBackpropValue() << std::endl;
-
-	xInit.Invalidate();
-	PInit.Invalidate();
-	QInit.Invalidate();
-}
-
-void TestUpdate()
+struct UpdatePipeline
+	: public Pipeline
 {
-	unsigned int state_dim = 3;
-	unsigned int obs_dim = 2;
+	UpdatePipeline( unsigned int state_dim, unsigned int obs_dim )
+	{
+		MatrixType x0 = VectorType::Random( state_dim );
+		MatrixType P0 = MatrixType::Identity( state_dim, state_dim );     //random_PD( state_dim );
+		MatrixType R = MatrixType::Identity( obs_dim, obs_dim );     //random_PD( obs_dim );
+		MatrixType C = MatrixType::Random( obs_dim, state_dim );
+		VectorType y = VectorType::Random( obs_dim );
 
-	ConstantModule xInit( VectorType::Zero( state_dim ) );
-	ConstantModule PInit( MatrixType::Identity( state_dim, state_dim ) );
-	ConstantModule RInit( MatrixType::Identity( obs_dim, obs_dim ) );
-	SinkModule xOut, POut;
+		upMod.SetLinearParams( C, y );
+
+		RegisterInput( upMod.GetXIn(), x0 );
+		RegisterInput( upMod.GetPIn(), P0 );
+		RegisterInput( upMod.GetRIn(), R );
+		RegisterOutput( upMod.GetXOut() );
+		RegisterOutput( upMod.GetPOut() );
+		RegisterOutput( upMod.GetVOut() );
+		RegisterOutput( upMod.GetSOut() );
+	}
 
 	KalmanUpdateModule upMod;
-	MatrixType C = MatrixType::Random( 2, 3 );
-	MatrixType y = MatrixType::Ones( obs_dim, 1 );
-	upMod.SetLinearParams( C, y );
+};
 
-	link_ports( upMod.GetXIn(), xInit.GetOutput() );
-	link_ports( upMod.GetPIn(), PInit.GetOutput() );
-	link_ports( upMod.GetRIn(), RInit.GetOutput() );
-	link_ports( xOut.GetInput(), upMod.GetXOut() );
-	link_ports( POut.GetInput(), upMod.GetPOut() );
-
-	xInit.Foreprop();
-	PInit.Foreprop();
-	RInit.Foreprop();
-
-	std::cout << "up xout: " << xOut.GetValue() << std::endl;
-	std::cout << "up Pout: " << POut.GetValue() << std::endl;
-
-	xOut.Backprop( MatrixType::Ones( 1, state_dim ) );
-	POut.Backprop( MatrixType::Ones( 1, state_dim * state_dim ) );
-	std::cout << "xinit backprop: " << xInit.GetBackpropValue() << std::endl;
-	std::cout << "Pinit backprop: " << PInit.GetBackpropValue() << std::endl;
-	std::cout << "RInit backprop: " << RInit.GetBackpropValue() << std::endl;
-
-	xInit.Invalidate();
-	PInit.Invalidate();
-	RInit.Invalidate();
-}
-
-void TestLikelihood()
+struct LikelihoodPipeline
+	: public Pipeline
 {
-	unsigned int x_dim = 3;
+	LikelihoodPipeline( unsigned int dim )
+	{
+		VectorType sample = VectorType::Random( dim );
+		MatrixType cov = random_PD( dim );
 
-	ConstantModule sample( VectorType::Random( x_dim ) );
-	ConstantModule cov( MatrixType::Random( x_dim, x_dim ) );
-	SinkModule llOut;
+		RegisterInput( gll.GetXIn(), sample );
+		RegisterInput( gll.GetSIn(), cov );
+		RegisterOutput( gll.GetLLOut() );
+	}
 
 	GaussianLogLikelihood gll;
-	link_ports( gll.GetXIn(), sample.GetOutput() );
-	link_ports( gll.GetSIn(), cov.GetOutput() );
-	link_ports( llOut.GetInput(), gll.GetLLOut() );
+};
 
-	sample.Foreprop();
-	cov.Foreprop();
+struct ReshapePipeline
+	: public Pipeline
+{
+	ReshapePipeline( unsigned int dim, unsigned int d )
+	{
+		std::vector<unsigned int> inds = gen_trilc_inds( dim, d );
+		lt.SetShapeParams( dim, dim, inds );
+		VectorType l = VectorType::Random( inds.size() );
+		RegisterInput( lt.GetInput(), l );
+		RegisterOutput( lt.GetOutput() );
+	}
 
-	std::cout << "gll: " << llOut.GetValue() << std::endl;
-}
+	ReshapeModule lt;
+};
+
+struct ProductPipeline
+	: public Pipeline
+{
+	ProductPipeline( unsigned int dim )
+	{
+		MatrixType X = MatrixType::Random( dim, dim );
+		MatrixType C = random_PD( dim );
+		RegisterInput( xmod.GetXIn(), X );
+		RegisterInput( xmod.GetCIn(), C );
+		RegisterOutput( xmod.GetSOut() );
+	}
+
+	XTCXModule xmod;
+};
+
+struct ExponentialPipeline
+	: public Pipeline
+{
+	ExponentialPipeline( unsigned int dim )
+	{
+		MatrixType A = MatrixType::Random( dim, dim );
+		RegisterInput( emod.GetInput(), A );
+		RegisterOutput( emod.GetOutput() );
+	}
+
+	ExponentialModule emod;
+};
 
 int main( int argc, char** argv )
 {
-	TestPredict();
-	TestUpdate();
-	TestLikelihood();
+	PredictPipeline pp( 3 );
+
+	std::cout << "Testing predict derivatives..." << std::endl;
+	test_derivatives( pp, 1E-6, 1E-7 );
+
+	UpdatePipeline up( 3, 2 );
+	std::cout << "Testing update derivatives..." << std::endl;
+	test_derivatives( up, 1E-6, 1E-7 );
+
+	LikelihoodPipeline lp( 2 );
+	std::cout << "Testing likelihood derivatives..." << std::endl;
+	test_derivatives( lp, 1E-6, 1E-7 );
+
+	ReshapePipeline rp( 3, 0 );
+	std::cout << "Testing reshape derivatives..." << std::endl;
+	test_derivatives( rp, 1E-6, 1E-7 );
+
+	ProductPipeline xp( 2 );
+	std::cout << "Testing product derivatives..." << std::endl;
+	test_derivatives( xp, 1E-6, 1E-7 );
+
+	ExponentialPipeline ep( 3 );
+	std::cout << "Testing exponential derivatives..." << std::endl;
+	test_derivatives( ep, 1E-6, 1E-7 );
 }

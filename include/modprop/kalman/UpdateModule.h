@@ -1,7 +1,7 @@
 #pragma once
 
 #include <iostream>
-#include "modprop/compo/ModulesCore.h"
+#include "modprop/kalman/KalmanModule.h"
 
 namespace argus
 {
@@ -14,7 +14,7 @@ MatrixType llt_solve_right( const Eigen::LLT<MatrixType>& llt,
 
 /*! \brief Adds two sources together. */
 class KalmanUpdateModule
-	: public ModuleBase
+	: public KalmanIn, public KalmanOut
 {
 public:
 
@@ -32,11 +32,7 @@ public:
 	void Foreprop();
 	void Backprop();
 
-	InputPort& GetXIn();
-	InputPort& GetPIn();
 	InputPort& GetRIn();
-	OutputPort& GetXOut();
-	OutputPort& GetPOut();
 	OutputPort& GetVOut();
 	OutputPort& GetSOut();
 
@@ -50,12 +46,7 @@ private:
 	Eigen::LLT<MatrixType> _SChol;
 	MatrixType _K;
 
-	InputPort _xIn;
-	InputPort _PIn;
 	InputPort _RIn;
-
-	OutputPort _xOut;
-	OutputPort _POut;
 	OutputPort _vOut;
 	OutputPort _SOut;
 

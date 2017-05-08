@@ -1,17 +1,12 @@
 #include "modprop/kalman/PredictModule.h"
 #include <unsupported/Eigen/KroneckerProduct>
-
+#include <iostream>
 namespace argus
 {
 KalmanPredictModule::KalmanPredictModule()
-	: _xIn( *this ), _PIn( *this ), _QIn( *this ),
-	_xOut( *this ), _POut( *this )
+	: _QIn( *this )
 {
-	RegisterInput( &_xIn );
-	RegisterInput( &_PIn );
 	RegisterInput( &_QIn );
-	RegisterOutput( &_xOut );
-	RegisterOutput( &_POut );
 }
 
 void KalmanPredictModule::SetLinearParams( const MatrixType& A )
@@ -67,11 +62,7 @@ void KalmanPredictModule::Backprop()
 	_QIn.Backprop( do_dQ );
 }
 
-InputPort& KalmanPredictModule::GetXIn() { return _xIn; }
-InputPort& KalmanPredictModule::GetPIn() { return _PIn; }
 InputPort& KalmanPredictModule::GetQIn() { return _QIn; }
-OutputPort& KalmanPredictModule::GetXOut() { return _xOut; }
-OutputPort& KalmanPredictModule::GetPOut() { return _POut; }
 
 void KalmanPredictModule::CheckParams()
 {

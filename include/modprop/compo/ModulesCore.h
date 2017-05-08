@@ -13,6 +13,7 @@ class ModuleBase
 public:
 
 	ModuleBase();
+	virtual ~ModuleBase();
 
 	void RegisterInput( InputPort* in );
 	void RegisterOutput( OutputPort* out );
@@ -52,9 +53,9 @@ public:
 private:
 
 	ModuleBase& _module;
+	bool _valid;
 	OutputPort* _source;
 
-	bool _valid;
 	MatrixType _value;
 };
 

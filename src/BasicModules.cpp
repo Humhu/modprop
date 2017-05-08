@@ -18,6 +18,17 @@ void ConstantModule::Backprop()
 
 OutputPort& ConstantModule::GetOutput() { return _output; }
 
+void ConstantModule::SetValue( const MatrixType& val )
+{
+	_value = val;
+	Invalidate();
+}
+
+const MatrixType& ConstantModule::GetValue() const
+{
+	return _value;
+}
+
 const MatrixType& ConstantModule::GetBackpropValue() const
 {
 	return _output.GetBackpropValue();

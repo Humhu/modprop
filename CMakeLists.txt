@@ -49,10 +49,15 @@ include_directories( ${modprop_INCLUDES} ${catkin_INCLUDE_DIRS} include )
 
 add_library( modprop 
 	src/BasicModules.cpp
+	src/DerivativeTester.cpp
+	src/ExponentialModule.cpp
 	src/GaussianLogLikelihood.cpp
+	src/KalmanModule.cpp
 	src/ModulesCore.cpp
 	src/PredictModule.cpp
-	src/UpdateModule.cpp )
+	src/ReshapeModule.cpp
+	src/UpdateModule.cpp
+	src/XTCXModule.cpp )
 
 # Test binaries
 # add_executable( test_regression tests/RegressionTest.cpp )
