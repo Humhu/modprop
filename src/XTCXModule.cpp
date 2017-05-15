@@ -47,4 +47,34 @@ void XTCXModule::Backprop()
 InputPort& XTCXModule::GetXIn() { return _XIn; }
 InputPort& XTCXModule::GetCIn() { return _CIn; }
 OutputPort& XTCXModule::GetSOut() { return _SOut; }
+
+InnerXTCXModule::InnerXTCXModule()
+	: _CIn( *this ), _SOut( *this )
+{
+	RegisterInput( &_CIn );
+	RegisterOutput( &_SOut );
+}
+
+void InnerXTCXModule::SetX( const MatrixType& X )
+{
+	_X = X;
+}
+
+void InnerXTCXModule::Foreprop()
+{
+	const MatrixType& C = _CIn.GetValue();
+
+	MatrixType S = _X.transpose() * C * _X;
+	_SOut.Foreprop( S );
+}
+
+void InnerXTCXModule::Backprop()
+{
+	MatrixType dS_dC = Eigen::kroneckerProduct( _X.transpose(), _X.transpose() );
+	MatrixType do_dC = _SOut.ChainBackprop( dS_dC );
+	_CIn.Backprop( do_dC );
+}
+
+InputPort& InnerXTCXModule::GetCIn() { return _CIn; }
+OutputPort& InnerXTCXModule::GetSOut() { return _SOut; }
 }

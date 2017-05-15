@@ -19,6 +19,8 @@ public:
 	                         const VectorType& x0,
 	                         const VectorType& y0 );
 
+	const MatrixType& GetTransMatrix() const;
+
 	VectorType LinpointDelta() const;
 
 	void Foreprop();

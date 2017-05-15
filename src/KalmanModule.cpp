@@ -138,4 +138,24 @@ void KalmanPosterior::Backprop()
 	_xIn.Backprop( _backX );
 	_PIn.Backprop( _backP );
 }
+
+KalmanScalingModule::KalmanScalingModule()
+: _xS( 1.0 ), _PS( 1.0 ) {}
+
+void KalmanScalingModule::SetXBackwardScale( double s ) { _xS = s; }
+void KalmanScalingModule::SetPBackwardScale( double s ) { _PS = s; }
+
+void KalmanScalingModule::Foreprop()
+{
+	_xOut.Foreprop( _xIn.GetValue() );
+	_POut.Foreprop( _PIn.GetValue() );
+}
+
+void KalmanScalingModule::Backprop()
+{
+	_xIn.Backprop( _xS * _xOut.GetBackpropValue() );
+	_PIn.Backprop( _PS * _POut.GetBackpropValue() );
+}
+
+
 }

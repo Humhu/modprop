@@ -51,18 +51,18 @@ struct UpdatePipeline
 
 		// Initialize R
 		Eigen::LDLT<MatrixType> ldlt( R );
-		std::vector<unsigned int> trilInds = gen_trilc_inds( obs_dim, 1 );
+		std::vector<IndPair > trilInds = gen_trilc_inds( obs_dim, 1 );
 		VectorType lInit( trilInds.size() );
 		MatrixType matL = ldlt.matrixL();
 		for( unsigned int i = 0; i < trilInds.size(); ++i )
 		{
-			lInit( i ) = matL( trilInds[i] );
+			lInit( trilInds[i].first ) = matL( trilInds[i].second );
 		}
 		_RlReshape.SetShapeParams( MatrixType::Identity( obs_dim, obs_dim ), trilInds );
 
-		std::vector<unsigned int> diagInds = gen_diag_inds( obs_dim );
 		VectorType dInit = ldlt.vectorD().array().log().matrix();
-		_RdReshape.SetShapeParams( MatrixType::Zero( obs_dim, obs_dim ), diagInds );
+		_RdReshape.SetShapeParams( MatrixType::Zero( obs_dim, obs_dim ),
+		                           gen_vec_to_diag_inds( obs_dim ) );
 
 		link_ports( _RexpD.GetOutput(), _RdReshape.GetInput() );
 		link_ports( _RdReshape.GetOutput(), _Rldlt.GetCIn() );
@@ -78,13 +78,13 @@ struct UpdatePipeline
 		matL = ldlt.matrixL();
 		for( unsigned int i = 0; i < trilInds.size(); ++i )
 		{
-			lInit( i ) = matL( trilInds[i] );
+			lInit( trilInds[i].first ) = matL( trilInds[i].second );
 		}
 		_PlReshape.SetShapeParams( MatrixType::Identity( state_dim, state_dim ), trilInds );
 
-		diagInds = gen_diag_inds( state_dim );
 		dInit = ldlt.vectorD().array().log().matrix();
-		_PdReshape.SetShapeParams( MatrixType::Zero( state_dim, state_dim ), diagInds );
+		_PdReshape.SetShapeParams( MatrixType::Zero( state_dim, state_dim ),
+		                           gen_vec_to_diag_inds( state_dim ) );
 
 		link_ports( _PexpD.GetOutput(), _PdReshape.GetInput() );
 		link_ports( _PdReshape.GetOutput(), _Pldlt.GetCIn() );
@@ -98,6 +98,7 @@ struct UpdatePipeline
 		RegisterOutput( upMod.GetPOut() );
 		RegisterOutput( upMod.GetVOut() );
 		RegisterOutput( upMod.GetSOut() );
+		RegisterOutput( upMod.GetUOut() );
 	}
 
 	ExponentialModule _RexpD;
@@ -122,18 +123,18 @@ struct LikelihoodPipeline
 		MatrixType cov = random_PD( dim );
 
 		Eigen::LDLT<MatrixType> ldlt( cov );
-		std::vector<unsigned int> trilInds = gen_trilc_inds( dim, 1 );
+		std::vector<IndPair > trilInds = gen_trilc_inds( dim, 1 );
 		VectorType lInit( trilInds.size() );
 		MatrixType matL = ldlt.matrixL();
 		for( unsigned int i = 0; i < trilInds.size(); ++i )
 		{
-			lInit( i ) = matL( trilInds[i] );
+			lInit( trilInds[i].first ) = matL( trilInds[i].second );
 		}
 		_lReshape.SetShapeParams( MatrixType::Identity( dim, dim ), trilInds );
 
-		std::vector<unsigned int> diagInds = gen_diag_inds( dim );
 		VectorType dInit = ldlt.vectorD().array().log().matrix();
-		_dReshape.SetShapeParams( MatrixType::Zero( dim, dim ), diagInds );
+		_dReshape.SetShapeParams( MatrixType::Zero( dim, dim ),
+		                          gen_vec_to_diag_inds( dim ) );
 
 		link_ports( _expD.GetOutput(), _dReshape.GetInput() );
 		link_ports( _dReshape.GetOutput(), _ldlt.GetCIn() );
@@ -159,7 +160,7 @@ struct ReshapePipeline
 {
 	ReshapePipeline( unsigned int dim, unsigned int d )
 	{
-		std::vector<unsigned int> inds = gen_trilc_inds( dim, d );
+		std::vector<IndPair> inds = gen_trilc_inds( dim, d );
 		lt.SetShapeParams( MatrixType::Identity( dim, dim ), inds );
 		VectorType l = VectorType::Random( inds.size() );
 		RegisterInput( lt.GetInput(), l );
@@ -169,10 +170,10 @@ struct ReshapePipeline
 	ReshapeModule lt;
 };
 
-struct ProductPipeline
+struct QuadraticPipeline
 	: public Pipeline
 {
-	ProductPipeline( unsigned int dim )
+	QuadraticPipeline( unsigned int dim )
 	{
 		MatrixType X = MatrixType::Random( dim, dim );
 		MatrixType C = random_PD( dim );
@@ -182,6 +183,21 @@ struct ProductPipeline
 	}
 
 	XTCXModule xmod;
+};
+
+struct ProductPipeline
+	: public Pipeline
+{
+	ProductPipeline( unsigned int m, unsigned int n )
+	{
+		MatrixType L = MatrixType::Random( m, n );
+		MatrixType R = MatrixType::Random( n, m );
+		RegisterInput( prod.GetLeftIn(), L );
+		RegisterInput( prod.GetRightIn(), R );
+		RegisterOutput( prod.GetOutput() );
+	}
+
+	ProductModule prod;
 };
 
 struct ExponentialPipeline
@@ -195,6 +211,21 @@ struct ExponentialPipeline
 	}
 
 	ExponentialModule emod;
+};
+
+struct OuterProductPipeline
+	: public Pipeline
+{
+	OuterProductPipeline( unsigned int dim )
+	{
+		VectorType v = VectorType::Random( dim );
+		VectorType u = VectorType::Random( dim );
+		RegisterInput( op.GetLeftIn(), v );
+		RegisterInput( op.GetRightIn(), u );
+		RegisterOutput( op.GetOutput() );
+	}
+
+	OuterProductModule op;
 };
 
 int main( int argc, char** argv )
@@ -216,11 +247,19 @@ int main( int argc, char** argv )
 	std::cout << "Testing reshape derivatives..." << std::endl;
 	test_derivatives( rp, 1E-6, 1E-7 );
 
-	ProductPipeline xp( 2 );
-	std::cout << "Testing product derivatives..." << std::endl;
+	QuadraticPipeline xp( 2 );
+	std::cout << "Testing quadratic derivatives..." << std::endl;
 	test_derivatives( xp, 1E-6, 1E-7 );
 
 	ExponentialPipeline ep( 3 );
 	std::cout << "Testing exponential derivatives..." << std::endl;
 	test_derivatives( ep, 1E-6, 1E-7 );
+
+	ProductPipeline prodp( 3, 4 );
+	std::cout << "Testing product derivatives..." << std::endl;
+	test_derivatives( prodp, 1E-6, 1E-7 );
+
+	OuterProductPipeline opd( 3 );
+	std::cout << "Testing outer product pipeline..." << std::endl;
+	test_derivatives( opd, 1E-6, 1E-7 );
 }

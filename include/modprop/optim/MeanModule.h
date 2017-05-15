@@ -18,6 +18,7 @@ public:
 
 	void RegisterSource( OutputPort& out );
 	void UnregisterSource( OutputPort& out );
+	virtual void UnregisterAllSources( bool recurse );
 
 	OutputPort& GetOutput();
 

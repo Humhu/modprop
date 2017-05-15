@@ -35,6 +35,8 @@ VectorType PredictModule::LinpointDelta() const
 	return xVec - _x0;
 }
 
+const MatrixType& PredictModule::GetTransMatrix() const { return _A; }
+
 void PredictModule::Foreprop()
 {
 	CheckParams();

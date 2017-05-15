@@ -93,4 +93,23 @@ private:
 	MatrixType _backP;
 };
 
+class KalmanScalingModule
+: public KalmanIn, public KalmanOut
+{
+public:
+
+	KalmanScalingModule();
+
+	void Foreprop();
+	void Backprop();
+
+	void SetXBackwardScale( double s );
+	void SetPBackwardScale( double s );
+
+private:
+
+	double _xS;
+	double _PS;	
+};
+
 }

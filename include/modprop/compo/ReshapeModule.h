@@ -4,10 +4,18 @@
 
 namespace argus
 {
+typedef std::pair<unsigned int, unsigned int> IndPair;
+
 // Functions to generate single column-major indices
-std::vector<unsigned int> gen_diag_inds( unsigned int N );
+std::vector<IndPair>
+gen_vec_to_diag_inds( unsigned int N );
+
+std::vector<IndPair>
+gen_dense_to_diag_inds( unsigned int N );
+
 // TODO Allow for above-diagonal d?
-std::vector<unsigned int> gen_trilc_inds( unsigned int N, unsigned int d );
+std::vector<IndPair>
+gen_trilc_inds( unsigned int N, unsigned int d );
 
 class ReshapeModule
 	: public ModuleBase
@@ -17,7 +25,9 @@ public:
 	ReshapeModule();
 
 	void SetShapeParams( const MatrixType& baseOut,
-	                     const std::vector<unsigned int>& inds );
+	                     const std::vector<IndPair>& inds );
+	void GetShapeParams( MatrixType& baseOut,
+	                     std::vector<IndPair>& inds ) const;
 
 	void Foreprop();
 	void Backprop();
@@ -31,6 +41,6 @@ private:
 	OutputPort _output;
 
 	MatrixType _baseOut;
-	std::vector<unsigned int> _inds;
+	std::vector<IndPair> _inds;
 };
 }

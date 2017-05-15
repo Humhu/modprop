@@ -28,16 +28,18 @@ MatrixType llt_solve_right( const Eigen::LLT<MatrixType>& llt,
 	return llt.solve( b.transpose() ).transpose();
 }
 
+// TODO Have args to enable/disable v, S, u outs
 UpdateModule::UpdateModule()
-	: _RIn( *this ), _vOut( *this ), _SOut( *this )
+	: _RIn( *this ), _vOut( *this ), _SOut( *this ), _uOut( *this )
 {
 	RegisterInput( &_RIn );
 	RegisterOutput( &_vOut );
 	RegisterOutput( &_SOut );
+	RegisterOutput( &_uOut );
 }
 
 void UpdateModule::SetLinearParams( const MatrixType& C,
-                                          const VectorType& y )
+                                    const VectorType& y )
 {
 	_C = C;
 	_y = y;
@@ -47,9 +49,9 @@ void UpdateModule::SetLinearParams( const MatrixType& C,
 }
 
 void UpdateModule::SetNonlinearParams( const MatrixType& G,
-                                             const VectorType& y,
-											 const VectorType& x0,
-											 const VectorType& y0 )
+                                       const VectorType& y,
+                                       const VectorType& x0,
+                                       const VectorType& y0 )
 {
 	_C = G;
 	_y = y;
@@ -57,6 +59,9 @@ void UpdateModule::SetNonlinearParams( const MatrixType& G,
 	_y0 = y0;
 	Invalidate();
 }
+
+const VectorType& UpdateModule::GetObs() const { return _y; }
+const MatrixType& UpdateModule::GetObsMatrix() const { return _C; }
 
 VectorType UpdateModule::LinpointDelta() const
 {
@@ -83,11 +88,15 @@ void UpdateModule::Foreprop()
 
 	MatrixType nextX = xIn + _K * v;
 	MatrixType nextP = PIn - _K * _C * PIn;
+	Eigen::Map<VectorType> nextXVec( nextX.data(), nextX.size(), 1 );
+	VectorType postYhat = _C * (nextXVec - _x0) + _y0;
+	VectorType u = _y - postYhat;
 
 	_xOut.Foreprop( nextX );
 	_POut.Foreprop( nextP );
 	_vOut.Foreprop( v );
 	_SOut.Foreprop( S );
+	_uOut.Foreprop( u );
 }
 
 void UpdateModule::Backprop()
@@ -96,20 +105,23 @@ void UpdateModule::Backprop()
 	MatrixType do_dPin_P, do_dRin_P;
 	MatrixType do_dxin_v;
 	MatrixType do_dPin_S, do_dRin_S;
+	MatrixType do_dxin_u, do_dPin_u, do_dR_u;
 
 	BackpropXOut( do_dxin_x, do_dPin_x, do_dR_x );
 	BackpropPOut( do_dPin_P, do_dRin_P );
 	BackpropVOut( do_dxin_v );
 	BackpropSOut( do_dPin_S, do_dRin_S );
+	BackpropUOut( do_dxin_u, do_dPin_u, do_dR_u );
 
-	_xIn.Backprop( sum_matrices( {do_dxin_x, do_dxin_v} ) );
-	_PIn.Backprop( sum_matrices( {do_dPin_x, do_dPin_P, do_dPin_S} ) );
-	_RIn.Backprop( sum_matrices( {do_dR_x, do_dRin_P, do_dRin_S} ) );
+	_xIn.Backprop( sum_matrices( {do_dxin_x, do_dxin_v, do_dxin_u} ) );
+	_PIn.Backprop( sum_matrices( {do_dPin_x, do_dPin_P, do_dPin_S, do_dPin_u} ) );
+	_RIn.Backprop( sum_matrices( {do_dR_x, do_dRin_P, do_dRin_S, do_dR_u} ) );
 }
 
 InputPort& UpdateModule::GetRIn() { return _RIn; }
 OutputPort& UpdateModule::GetVOut() { return _vOut; }
 OutputPort& UpdateModule::GetSOut() { return _SOut; }
+OutputPort& UpdateModule::GetUOut() { return _uOut; }
 
 void UpdateModule::CheckParams()
 {
@@ -127,23 +139,23 @@ void UpdateModule::BackpropXOut( MatrixType& do_dxin,
 	const MatrixType& vOut = _vOut.GetValue();
 	size_t N = xIn.size();
 
-	MatrixType dxout_dxin = MatrixType::Identity( N, N ) - _K * _C;
+	dxout_dxin = MatrixType::Identity( N, N ) - _K * _C;
 	do_dxin = _xOut.ChainBackprop( dxout_dxin );
 
 	MatrixType Sv = _SChol.solve( vOut );
 	MatrixType CTSv = _C.transpose() * Sv;
 	MatrixType KC = _K * _C;
-	MatrixType dxout_dPin = Eigen::kroneckerProduct( CTSv.transpose(),
-	                                                 MatrixType::Identity( N, N ) )
-	                        - Eigen::kroneckerProduct( CTSv.transpose(), KC );
+	dxout_dPin = Eigen::kroneckerProduct( CTSv.transpose(),
+	                                      MatrixType::Identity( N, N ) )
+	             - Eigen::kroneckerProduct( CTSv.transpose(), KC );
 	do_dPin = _xOut.ChainBackprop( dxout_dPin );
 
-	MatrixType dxout_dR = -Eigen::kroneckerProduct( Sv.transpose(), _K );
+	dxout_dR = -Eigen::kroneckerProduct( Sv.transpose(), _K );
 	do_dR = _xOut.ChainBackprop( dxout_dR );
 }
 
 void UpdateModule::BackpropPOut( MatrixType& do_dPin,
-                                       MatrixType& do_dRin )
+                                 MatrixType& do_dRin )
 {
 	size_t N = _xIn.GetValue().size();
 
@@ -152,8 +164,7 @@ void UpdateModule::BackpropPOut( MatrixType& do_dPin,
 	MatrixType II = MatrixType::Identity( N * N, N * N );
 	MatrixType T = gen_transpose_matrix( N, N );
 
-	MatrixType dPout_dPin = II
-	                        - (II + T) * Eigen::kroneckerProduct( I, KC )
+	MatrixType dPout_dPin = II - (II + T) * Eigen::kroneckerProduct( I, KC )
 	                        + Eigen::kroneckerProduct( KC, KC );
 	do_dPin = _POut.ChainBackprop( dPout_dPin );
 
@@ -167,11 +178,21 @@ void UpdateModule::BackpropVOut( MatrixType& do_dxin )
 }
 
 void UpdateModule::BackpropSOut( MatrixType& do_dPin,
-                                       MatrixType& do_dRin )
+                                 MatrixType& do_dRin )
 {
 	MatrixType dSout_dPin = Eigen::kroneckerProduct( _C, _C );
 	do_dPin = _SOut.ChainBackprop( dSout_dPin );
 
 	do_dRin = _SOut.GetBackpropValue();
+}
+
+void UpdateModule::BackpropUOut( MatrixType& do_dxin,
+                                 MatrixType& do_dPin,
+                                 MatrixType& do_dR )
+{
+	do_dxin = _uOut.ChainBackprop( -_C * dxout_dxin );
+	do_dPin = _uOut.ChainBackprop( -_C * dxout_dPin );
+	
+	do_dR = _uOut.ChainBackprop( -_C * dxout_dR );
 }
 }

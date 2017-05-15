@@ -13,12 +13,17 @@ class ModuleBase
 public:
 
 	ModuleBase();
+
+	// TODO Have the module destructor clean up by unregistering all the ports
 	virtual ~ModuleBase();
 
 	void RegisterInput( InputPort* in );
 	void RegisterOutput( OutputPort* out );
 	void UnregisterInput( InputPort* in );
 	void UnregisterOutput( OutputPort* out );
+	
+	virtual void UnregisterAllSources( bool recurse = true );
+	virtual void UnregisterAllConsumers( bool recurse = true );
 
 	virtual void Foreprop() = 0;
 	virtual void Backprop() = 0;
@@ -49,7 +54,9 @@ public:
 
 	bool Valid() const;
 	void Invalidate();
+	
 	void RegisterSource( OutputPort* src );
+	void UnregisterSource( bool recurse = true );
 
 	void Foreprop( const MatrixType& val );
 	void Backprop( const MatrixType& dodx );
@@ -78,12 +85,13 @@ public:
 	void Invalidate();
 	size_t NumConsumers() const;
 	void RegisterConsumer( InputPort* in );
-	void UnregisterConsumer( InputPort* in );
+	void UnregisterConsumer( InputPort* in, bool recurse = true );
+	void UnregisterAllConsumers( bool recurse = true );
 
 	void Foreprop( const MatrixType& val );
 	void Backprop( const MatrixType& dodx );
 	bool BackpropReady() const;
-	MatrixType ChainBackprop( const MatrixType& dydx );
+	MatrixType ChainBackprop( const MatrixType& dydx = MatrixType() );
 	const MatrixType& GetBackpropValue() const;
 	const MatrixType& GetValue() const;
 

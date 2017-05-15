@@ -70,5 +70,16 @@ void MeanModule::UnregisterSource( OutputPort& out )
 	_inputs.erase( _inputs.begin() + ind );
 }
 
+void MeanModule::UnregisterAllSources( bool recurse )
+{
+	ModuleBase::UnregisterAllSources( recurse );
+	_outputRecords.clear();
+	BOOST_FOREACH( const std::shared_ptr<InputPort>& in, _inputs )
+	{
+		UnregisterInput( in.get() );
+	}
+	_inputs.clear();
+}
+
 OutputPort& MeanModule::GetOutput() { return _output; }
 }

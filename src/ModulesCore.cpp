@@ -24,7 +24,7 @@ void ModuleBase::UnregisterInput( InputPort* in )
 	iter = std::find( _inputs.begin(), _inputs.end(), in );
 	if( iter == _inputs.end() )
 	{
-		throw std::runtime_error("Cannot unregister non-registered input port");
+		throw std::runtime_error( "Cannot unregister non-registered input port" );
 	}
 	_inputs.erase( iter );
 }
@@ -35,16 +35,33 @@ void ModuleBase::UnregisterOutput( OutputPort* out )
 	iter = std::find( _outputs.begin(), _outputs.end(), out );
 	if( iter == _outputs.end() )
 	{
-		throw std::runtime_error("Cannot unregister non-registered output port");
+		throw std::runtime_error( "Cannot unregister non-registered output port" );
 	}
 	_outputs.erase( iter );
+}
+
+void ModuleBase::UnregisterAllSources( bool recurse )
+{
+	BOOST_FOREACH( InputPort * in, _inputs )
+	{
+		in->UnregisterSource( recurse );
+	}
+}
+
+void ModuleBase::UnregisterAllConsumers( bool recurse )
+{
+	BOOST_FOREACH( OutputPort * out, _outputs )
+	{
+		out->UnregisterAllConsumers( recurse );
+	}
 }
 
 bool ModuleBase::FullyValid() const
 {
 	BOOST_FOREACH( InputPort * in, _inputs )
 	{
-		if( !in->Valid() ) { return false; }
+		if( !in->Valid() )
+		{ return false; }
 	}
 	return true;
 }
@@ -73,9 +90,6 @@ bool ModuleBase::BackpropReady()
 
 void ModuleBase::Invalidate()
 {
-	if( FullyInvalid() ) { return;
-	}
-
 	BOOST_FOREACH( InputPort * in, _inputs )
 	{
 		in->Invalidate();
@@ -95,6 +109,15 @@ void InputPort::RegisterSource( OutputPort* src )
 	_source = src;
 }
 
+void InputPort::UnregisterSource( bool recurse )
+{
+	if( _source && recurse )
+	{
+		_source->UnregisterConsumer( this, false );
+	}
+	_source = nullptr;
+}
+
 bool InputPort::Valid() const
 {
 	return _valid;
@@ -107,11 +130,11 @@ void InputPort::Invalidate()
 	_value = MatrixType();
 	_valid = false;
 
-	if( !_module.FullyInvalid() )
-	{
-		_module.Invalidate();
-	}
-	if( _source && _source->Valid() )
+	// if( !_module.FullyInvalid() )
+	// {
+	_module.Invalidate();
+	// }
+	if( _source ) //&& _source->Valid() )
 	{
 		_source->Invalidate();
 	}
@@ -169,7 +192,7 @@ void OutputPort::RegisterConsumer( InputPort* in )
 	_consumers.push_back( in );
 }
 
-void OutputPort::UnregisterConsumer( InputPort* in )
+void OutputPort::UnregisterConsumer( InputPort* in, bool recurse )
 {
 	std::vector<InputPort*>::iterator iter;
 	iter = std::find( _consumers.begin(), _consumers.end(), in );
@@ -177,7 +200,20 @@ void OutputPort::UnregisterConsumer( InputPort* in )
 	{
 		throw std::invalid_argument( "Cannot unregister non-registered consumer" );
 	}
+	if( recurse )
+	{
+		(*iter)->UnregisterSource( false );
+	}
 	_consumers.erase( iter );
+}
+
+void OutputPort::UnregisterAllConsumers( bool recurse )
+{
+	std::vector<InputPort*> conCopy = _consumers;
+	BOOST_FOREACH( InputPort * con, conCopy )
+	{
+		UnregisterConsumer( con, recurse );
+	}
 }
 
 void OutputPort::Invalidate()
@@ -189,16 +225,16 @@ void OutputPort::Invalidate()
 	_value = MatrixType();
 	_valid = false;
 
-	if( !_module.FullyInvalid() )
-	{
-		_module.Invalidate();
-	}
+	// if( !_module.FullyInvalid() )
+	// {
+	_module.Invalidate();
+	// }
 	BOOST_FOREACH( InputPort * con, _consumers )
 	{
-		if( con->Valid() )
-		{
-			con->Invalidate();
-		}
+		// if( con->Valid() )
+		// {
+		con->Invalidate();
+		// }
 	}
 }
 
@@ -244,6 +280,7 @@ void OutputPort::Backprop( const MatrixType& dodx )
 		}
 		_backpropAcc += dodx;
 	}
+
 	_numBacks++;
 
 	if( _numBacks > _consumers.size() )
@@ -269,12 +306,14 @@ MatrixType OutputPort::ChainBackprop( const MatrixType& dydx )
 		return MatrixType();
 	}
 
-	MatrixType out = _backpropAcc;
 	if( dydx.size() != 0 )
 	{
-		out = out * dydx;
+		return _backpropAcc * dydx;
 	}
-	return out;
+	else
+	{
+		return _backpropAcc;
+	}
 }
 
 const MatrixType& OutputPort::GetBackpropValue() const
@@ -299,8 +338,8 @@ void link_ports( OutputPort& out, InputPort& in )
 
 void unlink_ports( OutputPort& out, InputPort& in )
 {
-	in.RegisterSource( nullptr );
-	out.UnregisterConsumer( &in );
+	in.UnregisterSource( false );
+	out.UnregisterConsumer( &in, false );
 }
 
 MatrixType sum_matrices( const std::vector<MatrixType>& mats )

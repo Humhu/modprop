@@ -53,10 +53,13 @@ add_library( modprop
 	src/ExponentialModule.cpp
 	src/GaussianLikelihoodModule.cpp
 	src/KalmanModule.cpp
+	src/MathModules.cpp
 	src/MeanModule.cpp
 	src/ModulesCore.cpp
+	src/OuterProductModule.cpp
 	src/PredictModule.cpp
 	src/ReshapeModule.cpp
+	src/ScalingModules.cpp
 	src/UpdateModule.cpp
 	src/XTCXModule.cpp )
 

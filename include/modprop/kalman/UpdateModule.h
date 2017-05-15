@@ -27,6 +27,9 @@ public:
 	void SetNonlinearParams( const MatrixType& G, const VectorType& y,
 	                         const VectorType& x0, const VectorType& y0 );
 
+	const VectorType& GetObs() const;
+	const MatrixType& GetObsMatrix() const;
+
 	VectorType LinpointDelta() const;
 
 	void Foreprop();
@@ -35,6 +38,7 @@ public:
 	InputPort& GetRIn();
 	OutputPort& GetVOut();
 	OutputPort& GetSOut();
+	OutputPort& GetUOut(); // Residual
 
 private:
 
@@ -49,6 +53,11 @@ private:
 	InputPort _RIn;
 	OutputPort _vOut;
 	OutputPort _SOut;
+	OutputPort _uOut;
+
+	MatrixType dxout_dxin;
+	MatrixType dxout_dPin;
+	MatrixType dxout_dR;
 
 	void CheckParams();
 
@@ -58,5 +67,7 @@ private:
 	void BackpropPOut( MatrixType& do_dPin, MatrixType& do_dRin );
 	void BackpropVOut( MatrixType& do_dxin );
 	void BackpropSOut( MatrixType& do_dPin, MatrixType& do_dRin );
+	void BackpropUOut( MatrixType& do_dxin, MatrixType& do_dPin,
+	                   MatrixType& do_dRin );
 };
 }
