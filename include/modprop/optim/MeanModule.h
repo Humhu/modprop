@@ -24,6 +24,7 @@ public:
 
 private:
 
+
 	std::vector<OutputPort*> _outputRecords;
 	std::vector<std::shared_ptr<InputPort>> _inputs;
 	OutputPort _output;

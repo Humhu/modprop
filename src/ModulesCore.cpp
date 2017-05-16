@@ -6,21 +6,22 @@ namespace argus
 {
 ModuleBase::ModuleBase() {}
 
-ModuleBase::~ModuleBase() {}
+ModuleBase::~ModuleBase()
+{}
 
-void ModuleBase::RegisterInput( InputPort* in )
+void ModuleBase::RegisterInput( InputPort * in )
 {
 	_inputs.push_back( in );
 }
 
-void ModuleBase::RegisterOutput( OutputPort* out )
+void ModuleBase::RegisterOutput( OutputPort * out )
 {
 	_outputs.push_back( out );
 }
 
-void ModuleBase::UnregisterInput( InputPort* in )
+void ModuleBase::UnregisterInput( InputPort * in )
 {
-	std::vector<InputPort*>::iterator iter;
+	std::vector<InputPort *>::iterator iter;
 	iter = std::find( _inputs.begin(), _inputs.end(), in );
 	if( iter == _inputs.end() )
 	{
@@ -29,9 +30,9 @@ void ModuleBase::UnregisterInput( InputPort* in )
 	_inputs.erase( iter );
 }
 
-void ModuleBase::UnregisterOutput( OutputPort* out )
+void ModuleBase::UnregisterOutput( OutputPort * out )
 {
-	std::vector<OutputPort*>::iterator iter;
+	std::vector<OutputPort *>::iterator iter;
 	iter = std::find( _outputs.begin(), _outputs.end(), out );
 	if( iter == _outputs.end() )
 	{
@@ -42,7 +43,7 @@ void ModuleBase::UnregisterOutput( OutputPort* out )
 
 void ModuleBase::UnregisterAllSources( bool recurse )
 {
-	BOOST_FOREACH( InputPort * in, _inputs )
+	BOOST_FOREACH ( InputPort * in, _inputs )
 	{
 		in->UnregisterSource( recurse );
 	}
@@ -50,7 +51,7 @@ void ModuleBase::UnregisterAllSources( bool recurse )
 
 void ModuleBase::UnregisterAllConsumers( bool recurse )
 {
-	BOOST_FOREACH( OutputPort * out, _outputs )
+	BOOST_FOREACH ( OutputPort * out, _outputs )
 	{
 		out->UnregisterAllConsumers( recurse );
 	}
@@ -58,53 +59,90 @@ void ModuleBase::UnregisterAllConsumers( bool recurse )
 
 bool ModuleBase::FullyValid() const
 {
-	BOOST_FOREACH( InputPort * in, _inputs )
+	BOOST_FOREACH ( InputPort * in, _inputs )
 	{
 		if( !in->Valid() )
-		{ return false; }
+		{
+			return false;
+		}
 	}
 	return true;
 }
 
 bool ModuleBase::FullyInvalid() const
 {
-	BOOST_FOREACH( InputPort * in, _inputs )
+	BOOST_FOREACH ( InputPort * in, _inputs )
 	{
-		if( in->Valid() ) { return false; }
+		if( in->Valid() )
+		{
+			return false;
+		}
 	}
-	BOOST_FOREACH( OutputPort * out, _outputs )
+	BOOST_FOREACH ( OutputPort * out, _outputs )
 	{
-		if( out->Valid() ) { return false; }
+		if( out->Valid() )
+		{
+			return false;
+		}
 	}
 	return true;
 }
 
 bool ModuleBase::BackpropReady()
 {
-	BOOST_FOREACH( OutputPort * out, _outputs )
+	BOOST_FOREACH ( OutputPort * out, _outputs )
 	{
-		if( !out->BackpropReady() ) { return false; }
+		if( !out->BackpropReady() )
+		{
+			return false;
+		}
 	}
 	return true;
 }
 
 void ModuleBase::Invalidate()
 {
-	BOOST_FOREACH( InputPort * in, _inputs )
+	BOOST_FOREACH ( InputPort * in, _inputs )
 	{
 		in->Invalidate();
 	}
-	BOOST_FOREACH( OutputPort * out, _outputs )
+	BOOST_FOREACH ( OutputPort * out, _outputs )
 	{
 		out->Invalidate();
 	}
+}
+
+std::string ModuleBase::ToString() const
+{
+	std::stringstream ss;
+	ss << "Module:" << std::endl;
+	BOOST_FOREACH( InputPort * in, _inputs )
+	{
+		ss << *in << std::endl;
+	}
+	BOOST_FOREACH( OutputPort * out, _outputs )
+	{
+		ss << *out << std::endl;
+	}
+	return ss.str();
+}
+
+std::ostream& operator<<( std::ostream& os, const ModuleBase& mod )
+{
+	os << mod.ToString();
+	return os;
 }
 
 InputPort::InputPort( ModuleBase& base )
 	: _module( base ), _valid( false ), _source( nullptr )
 {}
 
-void InputPort::RegisterSource( OutputPort* src )
+InputPort::~InputPort()
+{
+	// UnregisterSource( true );
+}
+
+void InputPort::RegisterSource( OutputPort * src )
 {
 	_source = src;
 }
@@ -125,7 +163,10 @@ bool InputPort::Valid() const
 
 void InputPort::Invalidate()
 {
-	if( !Valid() ) { return; }
+	if( !Valid() )
+	{
+		return;
+	}
 
 	_value = MatrixType();
 	_valid = false;
@@ -173,9 +214,29 @@ const MatrixType& InputPort::GetValue() const
 	return _value;
 }
 
+std::string InputPort::ToString() const
+{
+	std::stringstream ss;
+	ss << "Input port:" << std::endl
+	<< "\tSource: " << _source << std::endl
+	<< "\tValid: " << _valid << std::endl;
+	return ss.str();
+}
+
+std::ostream& operator<<( std::ostream& os, const InputPort& in )
+{
+	os << in.ToString();
+	return os;
+}
+
 OutputPort::OutputPort( ModuleBase& base )
 	: _module( base ), _valid( false ), _numBacks( 0 )
 {}
+
+OutputPort::~OutputPort()
+{
+	// UnregisterAllConsumers( true );
+}
 
 bool OutputPort::Valid() const
 {
@@ -187,14 +248,18 @@ size_t OutputPort::NumConsumers() const
 	return _consumers.size();
 }
 
-void OutputPort::RegisterConsumer( InputPort* in )
+void OutputPort::RegisterConsumer( InputPort * in )
 {
+	if( !in )
+	{
+		throw std::runtime_error( "Cannot register null consumer!" );
+	}
 	_consumers.push_back( in );
 }
 
-void OutputPort::UnregisterConsumer( InputPort* in, bool recurse )
+void OutputPort::UnregisterConsumer( InputPort * in, bool recurse )
 {
-	std::vector<InputPort*>::iterator iter;
+	std::vector<InputPort *>::iterator iter;
 	iter = std::find( _consumers.begin(), _consumers.end(), in );
 	if( iter == _consumers.end() )
 	{
@@ -209,8 +274,8 @@ void OutputPort::UnregisterConsumer( InputPort* in, bool recurse )
 
 void OutputPort::UnregisterAllConsumers( bool recurse )
 {
-	std::vector<InputPort*> conCopy = _consumers;
-	BOOST_FOREACH( InputPort * con, conCopy )
+	std::vector<InputPort *> conCopy = _consumers;
+	BOOST_FOREACH ( InputPort * con, conCopy )
 	{
 		UnregisterConsumer( con, recurse );
 	}
@@ -218,7 +283,10 @@ void OutputPort::UnregisterAllConsumers( bool recurse )
 
 void OutputPort::Invalidate()
 {
-	if( !Valid() ) { return; }
+	if( !Valid() )
+	{
+		return;
+	}
 
 	_backpropAcc = MatrixType();
 	_numBacks = 0;
@@ -229,7 +297,7 @@ void OutputPort::Invalidate()
 	// {
 	_module.Invalidate();
 	// }
-	BOOST_FOREACH( InputPort * con, _consumers )
+	BOOST_FOREACH ( InputPort * con, _consumers )
 	{
 		// if( con->Valid() )
 		// {
@@ -242,7 +310,7 @@ void OutputPort::Foreprop( const MatrixType& val )
 {
 	_value = val;
 	_valid = true;
-	BOOST_FOREACH( InputPort * con, _consumers )
+	BOOST_FOREACH ( InputPort * con, _consumers )
 	{
 		con->Foreprop( _value );
 	}
@@ -330,6 +398,22 @@ const MatrixType& OutputPort::GetValue() const
 	return _value;
 }
 
+std::string OutputPort::ToString() const
+{
+	std::stringstream ss;
+	ss << "Output port:" << std::endl
+	<< "\tNum consumers: " << NumConsumers() << std::endl
+	<< "\tValid: " << _valid << std::endl
+	<< "\tNum backprops: " << _numBacks;
+	return ss.str();
+}
+
+std::ostream& operator<<( std::ostream& os, const OutputPort& out )
+{
+	os << out.ToString();
+	return os;
+}
+
 void link_ports( OutputPort& out, InputPort& in )
 {
 	in.RegisterSource( &out );
@@ -353,7 +437,10 @@ MatrixType sum_matrices( const std::vector<MatrixType>& mats )
 	MatrixType out;
 	for( unsigned int i = 0; i < mats.size(); ++i )
 	{
-		if( mats[i].size() == 0 ) { continue; }
+		if( mats[i].size() == 0 )
+		{
+			continue;
+		}
 		if( !init )
 		{
 			out = mats[i];

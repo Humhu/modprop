@@ -2,6 +2,7 @@
 
 #include "modprop/ModpropTypes.h"
 #include <boost/foreach.hpp>
+#include <iostream>
 
 namespace argus
 {
@@ -22,8 +23,6 @@ public:
 	void UnregisterInput( InputPort* in );
 	void UnregisterOutput( OutputPort* out );
 	
-	virtual void UnregisterAllSources( bool recurse = true );
-	virtual void UnregisterAllConsumers( bool recurse = true );
 
 	virtual void Foreprop() = 0;
 	virtual void Backprop() = 0;
@@ -33,6 +32,11 @@ public:
 	bool BackpropReady();
 
 	void Invalidate();
+
+	std::string ToString() const;
+
+	virtual void UnregisterAllSources( bool recurse = true );
+	virtual void UnregisterAllConsumers( bool recurse = true );
 
 private:
 
@@ -44,6 +48,8 @@ private:
 	std::vector<OutputPort*> _outputs;
 };
 
+std::ostream& operator<<( const std::ostream& os, const ModuleBase& mod );
+
 // NOTE All ports use dynamically-sized matrices to represent both scalars
 // and matrices
 class InputPort
@@ -51,6 +57,7 @@ class InputPort
 public:
 
 	InputPort( ModuleBase& base );
+	~InputPort();
 
 	bool Valid() const;
 	void Invalidate();
@@ -62,6 +69,8 @@ public:
 	void Backprop( const MatrixType& dodx );
 
 	const MatrixType& GetValue() const;
+
+	std::string ToString() const;
 
 private:
 
@@ -75,11 +84,14 @@ private:
 	MatrixType _value;
 };
 
+std::ostream& operator<<( std::ostream& os, const InputPort& in );
+
 class OutputPort
 {
 public:
 
 	OutputPort( ModuleBase& base );
+	~OutputPort();
 
 	bool Valid() const;
 	void Invalidate();
@@ -95,6 +107,8 @@ public:
 	const MatrixType& GetBackpropValue() const;
 	const MatrixType& GetValue() const;
 
+	std::string ToString() const;
+
 private:
 
 	OutputPort( const OutputPort& other );
@@ -108,6 +122,8 @@ private:
 	MatrixType _backpropAcc;
 	size_t _numBacks;
 };
+
+std::ostream& operator<<( std::ostream& os, const OutputPort& out );
 
 void link_ports( OutputPort& out, InputPort& in );
 void unlink_ports( OutputPort& out, InputPort& in );
